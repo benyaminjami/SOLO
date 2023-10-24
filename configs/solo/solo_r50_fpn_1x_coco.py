@@ -1,3 +1,4 @@
+import os
 _base_ = [
     '../_base_/datasets/coco_instance.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
@@ -37,6 +38,9 @@ model = dict(
         pos_scale=0.2,
         num_grids=[40, 36, 24, 16, 12],
         cls_down_index=0,
+        centerness=True,
+        filter_center_constraint=True,
+        loss_centerness=dict(type="CrossEntropyLoss", use_sigmoid=True, loss_weight=1.0),
         loss_mask=dict(type='DiceLoss', use_sigmoid=True, loss_weight=3.0),
         loss_cls=dict(
             type='FocalLoss',
@@ -56,7 +60,23 @@ model = dict(
         max_per_img=100))
 
 # optimizer
-optim_wrapper = dict(optimizer=dict(lr=0.01))
+optim_wrapper = dict(optimizer=dict(lr=0.0001))
 
 val_evaluator = dict(metric='segm')
 test_evaluator = val_evaluator
+
+vis_backends = [
+    dict(type='LocalVisBackend'),
+    dict(type='WandbVisBackend',
+         init_kwargs={'project': 'solo',
+                      'group': os.environ['SLURM_JOB_ID']})
+    ]
+
+visualizer = dict(
+    type='DetLocalVisualizer',
+    vis_backends=vis_backends,
+    name='visualizer')
+
+dist_params = dict(backend='nccl', port=29500)
+
+load_from = 'https://download.openmmlab.com/mmdetection/v2.0/solo/solo_r50_fpn_1x_coco/solo_r50_fpn_1x_coco_20210821_035055-2290a6b8.pth'
